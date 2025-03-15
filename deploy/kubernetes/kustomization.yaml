@@ -1,0 +1,86 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+  - config.yaml
+  - infrastructure.yaml
+  - api-gateway.yaml
+  - monitoring-engine.yaml
+  - data-processing.yaml
+  - alert-system.yaml
+
+commonLabels:
+  environment: production
+  app.kubernetes.io/part-of: monitoring-stack
+
+images:
+  - name: monitoring/api-gateway
+    newTag: latest
+  - name: monitoring/scheduler
+    newTag: latest
+  - name: monitoring/probe-manager
+    newTag: latest
+  - name: monitoring/probe-worker
+    newTag: latest
+  - name: monitoring/ingestion-service
+    newTag: latest
+  - name: monitoring/analytics-service
+    newTag: latest
+  - name: monitoring/alert-manager
+    newTag: latest
+  - name: monitoring/notification-service
+    newTag: latest
+
+configMapGenerator:
+  - name: monitoring-versions
+    literals:
+      - APP_VERSION=1.0.0
+      - API_VERSION=v1
+
+secretGenerator:
+  - name: monitoring-secrets-generated
+    envs:
+      - .env.secrets
+
+patches:
+  - target:
+      kind: Deployment
+      labelSelector: "app.kubernetes.io/part-of=monitoring-stack"
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/annotations/checksum
+        value: ${CHECKSUM}
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: APP_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: monitoring-versions
+              key: APP_VERSION
+
+replicas:
+  - name: api-gateway
+    count: 3
+  - name: probe-manager
+    count: 3
+  - name: ingestion-service
+    count: 3
+  - name: analytics-service
+    count: 2
+  - name: alert-manager
+    count: 2
+  - name: notification-service
+    count: 2
+
+vars:
+  - name: CHECKSUM
+    objref:
+      kind: ConfigMap
+      name: monitoring-versions
+      apiVersion: v1
+    fieldref:
+      fieldpath: metadata.uid

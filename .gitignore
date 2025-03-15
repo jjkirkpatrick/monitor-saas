@@ -1,0 +1,91 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+bin/
+dist/
+build/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.secrets
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Kubernetes
+deploy/kubernetes/.env.secrets
+
+# Docker
+.docker/
+
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Debug files
+debug
+*.debug
+
+# Binary files
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go specific
+*.test
+*.out
+go.work
+
+# Frontend specific
+.cache/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+
+# Certificate files
+*.pem
+*.key
+*.crt
+*.csr
+*.srl
+
+# Observability data
+data/
+prometheus_data/
+grafana_data/
+loki_data/
+tempo_data/
+
+# Local development overrides
+docker-compose.override.yml

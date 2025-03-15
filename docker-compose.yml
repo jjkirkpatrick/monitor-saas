@@ -1,0 +1,207 @@
+version: '3.8'
+
+services:
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api-gateway
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
+      - NATS_URL=nats://nats:4222
+      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+    depends_on:
+      - postgres
+      - nats
+
+  # Monitoring Engine Services
+  scheduler:
+    build:
+      context: .
+      dockerfile: services/monitoring-engine/scheduler/Dockerfile
+    environment:
+      - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - postgres
+      - nats
+
+  probe-manager:
+    build:
+      context: .
+      dockerfile: services/monitoring-engine/probe-manager/Dockerfile
+    environment:
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - nats
+
+  probe-worker:
+    build:
+      context: .
+      dockerfile: services/monitoring-engine/probe-worker/Dockerfile
+    environment:
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - nats
+    deploy:
+      replicas: 3
+
+  # Data Processing Services
+  ingestion-service:
+    build:
+      context: .
+      dockerfile: services/data-processing/ingestion/Dockerfile
+    environment:
+      - TIMESCALE_DSN=postgresql://monitoring:monitoring@timescaledb:5432/monitoring_metrics?sslmode=disable
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - timescaledb
+      - nats
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: services/data-processing/analytics/Dockerfile
+    environment:
+      - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
+      - TIMESCALE_DSN=postgresql://monitoring:monitoring@timescaledb:5432/monitoring_metrics?sslmode=disable
+    depends_on:
+      - postgres
+      - timescaledb
+
+  # Alert System Services
+  alert-manager:
+    build:
+      context: .
+      dockerfile: services/alert-system/manager/Dockerfile
+    environment:
+      - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
+      - NATS_URL=nats://nats:4222
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - nats
+      - redis
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/alert-system/notification/Dockerfile
+    environment:
+      - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
+      - NATS_URL=nats://nats:4222
+      - REDIS_URL=redis://redis:6379
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    depends_on:
+      - postgres
+      - nats
+      - redis
+
+  # Infrastructure Services
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=monitoring
+      - POSTGRES_PASSWORD=monitoring
+      - POSTGRES_DB=monitoring
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      - POSTGRES_USER=monitoring
+      - POSTGRES_PASSWORD=monitoring
+      - POSTGRES_DB=monitoring_metrics
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  nats:
+    image: nats:2.9-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["--jetstream"]
+
+  # Observability Stack
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./config/grafana:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+
+  loki:
+    image: grafana/loki:2.8.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./config/loki:/etc/loki
+      - loki_data:/loki
+
+  tempo:
+    image: grafana/tempo:2.1.0
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+    volumes:
+      - ./config/tempo:/etc/tempo
+      - tempo_data:/tmp/tempo
+
+volumes:
+  postgres_data:
+  timescaledb_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  tempo_data:
+
+networks:
+  default:
+    name: monitoring-network
