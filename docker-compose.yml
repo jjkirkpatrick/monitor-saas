@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-  # Frontend
   frontend:
     build:
       context: ./frontend
@@ -15,6 +12,8 @@ services:
       - /app/node_modules
     depends_on:
       - api-gateway
+    networks:
+      - proxy
 
   # API Gateway
   api-gateway:
@@ -26,11 +25,13 @@ services:
     environment:
       - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
       - NATS_URL=nats://nats:4222
-      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
-      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+      - AUTH0_DOMAIN=monitoring-dev.uk.auth0.com
+      - AUTH0_AUDIENCE=http://localhost:8080
     depends_on:
       - postgres
       - nats
+    networks:
+      - proxy
 
   # Monitoring Engine Services
   scheduler:
@@ -43,6 +44,8 @@ services:
     depends_on:
       - postgres
       - nats
+    networks:
+      - proxy
 
   probe-manager:
     build:
@@ -52,6 +55,8 @@ services:
       - NATS_URL=nats://nats:4222
     depends_on:
       - nats
+    networks:
+      - proxy
 
   probe-worker:
     build:
@@ -63,6 +68,8 @@ services:
       - nats
     deploy:
       replicas: 3
+    networks:
+      - proxy
 
   # Data Processing Services
   ingestion-service:
@@ -70,11 +77,14 @@ services:
       context: .
       dockerfile: services/data-processing/ingestion/Dockerfile
     environment:
+      - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
       - TIMESCALE_DSN=postgresql://monitoring:monitoring@timescaledb:5432/monitoring_metrics?sslmode=disable
       - NATS_URL=nats://nats:4222
     depends_on:
       - timescaledb
       - nats
+    networks:
+      - proxy
 
   analytics-service:
     build:
@@ -83,9 +93,12 @@ services:
     environment:
       - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
       - TIMESCALE_DSN=postgresql://monitoring:monitoring@timescaledb:5432/monitoring_metrics?sslmode=disable
+      - NATS_URL=nats://nats:4222
     depends_on:
       - postgres
       - timescaledb
+    networks:
+      - proxy
 
   # Alert System Services
   alert-manager:
@@ -100,6 +113,8 @@ services:
       - postgres
       - nats
       - redis
+    networks:
+      - proxy
 
   notification-service:
     build:
@@ -108,7 +123,7 @@ services:
     environment:
       - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
       - NATS_URL=nats://nats:4222
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis:6379
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_USERNAME=${SMTP_USERNAME}
@@ -118,6 +133,8 @@ services:
       - postgres
       - nats
       - redis
+    networks:
+      - proxy
 
   # Infrastructure Services
   postgres:
@@ -130,6 +147,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - proxy
 
   timescaledb:
     image: timescale/timescaledb:latest-pg15
@@ -141,57 +160,73 @@ services:
       - "5433:5432"
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
+    networks:
+      - proxy
 
   redis:
-    image: redis:7-alpine
+    image: redis:latest
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - proxy
 
   nats:
-    image: nats:2.9-alpine
+    image: nats:latest
     ports:
       - "4222:4222"
       - "8222:8222"
     command: ["--jetstream"]
+    networks:
+      - proxy
 
   # Observability Stack
   prometheus:
-    image: prom/prometheus:v2.45.0
+    image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
-      - ./config/prometheus:/etc/prometheus
+      - ./deploy/observability/prometheus:/etc/prometheus
       - prometheus_data:/prometheus
+    networks:
+      - proxy
 
   grafana:
-    image: grafana/grafana:10.0.0
+    image: grafana/grafana:latest
     ports:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - ./config/grafana:/etc/grafana/provisioning
+      - ./deploy/observability/grafana/datasources:/etc/grafana/provisioning/datasources
       - grafana_data:/var/lib/grafana
+    networks:
+      - proxy
 
   loki:
-    image: grafana/loki:2.8.0
+    image: grafana/loki:latest
     ports:
       - "3100:3100"
+    command: -config.file=/etc/loki/loki.yml -config.expand-env=true
     volumes:
-      - ./config/loki:/etc/loki
+      - ./deploy/observability/loki/loki.yaml:/etc/loki/loki.yml
       - loki_data:/loki
+    networks:
+      - proxy
 
   tempo:
-    image: grafana/tempo:2.1.0
+    image: grafana/tempo:latest
     ports:
       - "3200:3200"
       - "4317:4317"
     volumes:
-      - ./config/tempo:/etc/tempo
+      - ./deploy/observability/tempo:/etc/tempo
       - tempo_data:/tmp/tempo
+    command: -config.file=/etc/tempo/tempo.yaml
+    networks:
+      - proxy
 
 volumes:
   postgres_data:
@@ -203,5 +238,6 @@ volumes:
   tempo_data:
 
 networks:
-  default:
+  proxy:
     name: monitoring-network
+    external: true

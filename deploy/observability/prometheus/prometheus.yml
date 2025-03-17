@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+
+  - job_name: 'scheduler'
+    static_configs:
+      - targets: ['scheduler:8080']
+
+  - job_name: 'probe-manager'
+    static_configs:
+      - targets: ['probe-manager:8080']
+
+  - job_name: 'probe-worker'
+    static_configs:
+      - targets: ['probe-worker:8080']
+
+  - job_name: 'ingestion-service'
+    static_configs:
+      - targets: ['ingestion-service:8080']
+
+  - job_name: 'analytics-service'
+    static_configs:
+      - targets: ['analytics-service:8080']
+
+  - job_name: 'alert-manager'
+    static_configs:
+      - targets: ['alert-manager:8080']
+
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:8080'] 

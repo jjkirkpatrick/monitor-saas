@@ -1,5 +1,5 @@
 # Development commands
-.PHONY: dev build test lint clean generate-secrets k8s-apply k8s-delete docker-build docker-push
+.PHONY: dev build test lint clean docker-build docker-push
 
 # Variables
 DOCKER_REGISTRY ?= monitoring
@@ -8,13 +8,13 @@ SERVICES := api-gateway scheduler probe-manager probe-worker ingestion-service a
 
 # Development
 dev:
-	cd frontend && pnpm run dev
+	cd frontend && npm run dev
 
 # Build commands
 build: build-frontend build-services
 
 build-frontend:
-	cd frontend && pnpm run build
+	cd frontend && npm run build
 
 build-services:
 	@for service in $(SERVICES); do \
@@ -26,7 +26,7 @@ build-services:
 test: test-frontend test-services
 
 test-frontend:
-	cd frontend && pnpm test
+	cd frontend && npm test
 
 test-services:
 	go test ./...
@@ -35,7 +35,7 @@ test-services:
 lint: lint-frontend lint-services
 
 lint-frontend:
-	cd frontend && pnpm run lint
+	cd frontend && npm run lint
 
 lint-services:
 	golangci-lint run
@@ -43,23 +43,7 @@ lint-services:
 # Clean commands
 clean:
 	rm -rf bin/
-	cd frontend && pnpm run clean
-
-# Generate Kubernetes secrets
-generate-secrets:
-	@if [ ! -f scripts/generate-secrets.sh ]; then \
-		echo "Error: scripts/generate-secrets.sh not found" ; \
-		exit 1 ; \
-	fi
-	chmod +x scripts/generate-secrets.sh
-	./scripts/generate-secrets.sh
-
-# Kubernetes commands
-k8s-apply:
-	kubectl apply -k deploy/kubernetes/
-
-k8s-delete:
-	kubectl delete -k deploy/kubernetes/
+	cd frontend && npm run clean
 
 # Docker commands
 docker-build:
@@ -76,12 +60,30 @@ docker-push:
 
 # Install dependencies
 install:
-	cd frontend && pnpm install
+	cd frontend && npm install
 	go mod download
 
 # Run local development environment
-dev-env-up:
+setup-observability:
+	mkdir -p deploy/observability/prometheus deploy/observability/loki deploy/observability/tempo deploy/observability/grafana
+	if not exist deploy/observability/prometheus/prometheus.yml copy deploy/observability/prometheus/prometheus.yml deploy/observability/prometheus/ >nul 2>&1
+	if not exist deploy/observability/loki/local-config.yaml copy deploy/observability/loki/local-config.yaml deploy/observability/loki/ >nul 2>&1
+	if not exist deploy/observability/tempo/tempo.yaml copy deploy/observability/tempo/tempo.yaml deploy/observability/tempo/ >nul 2>&1
+
+check-env:
+	if not exist .env ( \
+		if exist deploy/kubernetes/.env.secrets.example ( \
+			copy deploy/kubernetes/.env.secrets.example .env \
+		) else ( \
+			echo Error: deploy/kubernetes/.env.secrets.example not found && exit 1 \
+		) \
+	)
+
+dev-env-up: setup-observability check-env
 	docker-compose up -d
+
+dev-env-build:
+	docker-compose build
 
 dev-env-down:
 	docker-compose down
@@ -89,18 +91,26 @@ dev-env-down:
 # Help
 help:
 	@echo "Available commands:"
+	@echo "Development:"
 	@echo "  make dev              - Start frontend development server"
 	@echo "  make build           - Build all services and frontend"
 	@echo "  make test            - Run all tests"
 	@echo "  make lint            - Run linters"
 	@echo "  make clean           - Clean build artifacts"
 	@echo "  make install         - Install dependencies"
-	@echo "  make generate-secrets - Generate Kubernetes secrets"
-	@echo "  make k8s-apply      - Apply Kubernetes manifests"
-	@echo "  make k8s-delete     - Delete Kubernetes resources"
+	@echo ""
+	@echo "Docker:"
 	@echo "  make docker-build   - Build Docker images"
 	@echo "  make docker-push    - Push Docker images"
+	@echo ""
+	@echo "Local Development:"
 	@echo "  make dev-env-up     - Start local development environment"
 	@echo "  make dev-env-down   - Stop local development environment"
+	@echo "  make dev-env-build  - Build local development environment"
+	@echo ""
+	@echo "Variables:"
+	@echo "  DOCKER_REGISTRY     - Docker registry (default: monitoring)"
+	@echo "  VERSION            - Image version tag (default: latest)"
+
 
 .DEFAULT_GOAL := help

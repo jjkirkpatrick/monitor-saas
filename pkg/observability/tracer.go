@@ -17,7 +17,10 @@ func InitTracer(serviceName string) (func(), error) {
 	ctx := context.Background()
 
 	// Create the OTLP exporter
-	exporter, err := otlptracegrpc.New(ctx)
+	exporter, err := otlptracegrpc.New(ctx,
+		otlptracegrpc.WithEndpoint("tempo:4317"),
+		otlptracegrpc.WithInsecure(), // Since we're in Docker network, no TLS needed
+	)
 	if err != nil {
 		return nil, fmt.Errorf("creating OTLP trace exporter: %w", err)
 	}

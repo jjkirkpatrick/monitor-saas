@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jjkirkpatrick/monitoring/pkg/observability"
+	_ "github.com/lib/pq" // Import postgres driver
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 )
