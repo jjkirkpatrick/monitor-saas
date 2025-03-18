@@ -25,8 +25,8 @@ services:
     environment:
       - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
       - NATS_URL=nats://nats:4222
-      - AUTH0_DOMAIN=monitoring-dev.uk.auth0.com
-      - AUTH0_AUDIENCE=http://localhost:8080
+      - SUPABASE_PROJECT_REF=azvobquohejnqdvqtbnz
+      - SUPABASE_JWT_SECRET=wf6EXDROj8BX374nvekpNwhwyXmfNPgaEOQQNsfzmVK63ceaLuQdvBZWRKT3Pl+N/HBB+5QJfDT9EmUZ7yFFtg==
     depends_on:
       - postgres
       - nats

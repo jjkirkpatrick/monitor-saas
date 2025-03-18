@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,31 +10,22 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/jjkirkpatrick/monitoring/internal/database"
 	"github.com/jjkirkpatrick/monitoring/pkg/auth"
 	"github.com/jjkirkpatrick/monitoring/pkg/observability"
-	"github.com/joho/godotenv"
+	"github.com/jjkirkpatrick/monitoring/services/api-gateway/handlers"
+	"github.com/jjkirkpatrick/monitoring/services/api-gateway/handlers/alerts"
+	"github.com/jjkirkpatrick/monitoring/services/api-gateway/handlers/health"
+	"github.com/jjkirkpatrick/monitoring/services/api-gateway/handlers/monitors"
+	"github.com/jjkirkpatrick/monitoring/services/api-gateway/handlers/settings"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.uber.org/zap"
 )
 
-type handler struct {
-	logger *zap.Logger
-}
-
-func newHandler(logger *zap.Logger) *handler {
-	return &handler{
-		logger: logger,
-	}
-}
-
 func main() {
-	// Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: Error loading .env file: %v", err)
-	}
-
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
@@ -46,8 +36,16 @@ func main() {
 	}
 	defer shutdown()
 
+	// Initialize Database
+	ctx := context.Background()
+	db, err := database.New(ctx)
+	if err != nil {
+		logger.Fatal("failed to initialize database", zap.Error(err))
+	}
+	defer db.Close()
+
 	// Initialize Prometheus metrics
-	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+	prometheus.MustRegister(collectors.NewBuildInfoCollector())
 
 	// Initialize Gin
 	router := gin.New()
@@ -85,16 +83,14 @@ func main() {
 	// Metrics endpoint for Prometheus
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	// Initialize Auth0 middleware
-	auth, err := auth.NewAuth0Middleware(
-		os.Getenv("AUTH0_DOMAIN"),
-		os.Getenv("AUTH0_AUDIENCE"),
-	)
-	if err != nil {
-		logger.Fatal("failed to initialize auth middleware", zap.Error(err))
-	}
+	// Initialize base handler
+	baseHandler := handlers.NewHandler(logger, db)
 
-	h := newHandler(logger)
+	// Initialize domain handlers
+	healthHandler := health.NewHandler(baseHandler)
+	monitorsHandler := monitors.NewHandler(baseHandler)
+	alertsHandler := alerts.NewHandler(baseHandler)
+	settingsHandler := settings.NewHandler(baseHandler)
 
 	// API Routes
 	v1 := router.Group("/api/v1")
@@ -102,35 +98,35 @@ func main() {
 		// Public routes
 		public := v1.Group("/public")
 		{
-			public.GET("/health", h.healthCheck)
+			public.GET("/health", healthHandler.Check)
 		}
 
 		// Protected routes
 		protected := v1.Group("/")
-		protected.Use(auth.Middleware())
+		protected.Use(auth.JWTMiddleware())
 		{
 			monitors := protected.Group("/monitors")
 			{
-				monitors.GET("", h.listMonitors)
-				monitors.POST("", h.createMonitor)
-				monitors.GET("/:id", h.getMonitor)
-				monitors.PUT("/:id", h.updateMonitor)
-				monitors.DELETE("/:id", h.deleteMonitor)
+				monitors.GET("", monitorsHandler.List)
+				monitors.POST("", monitorsHandler.Create)
+				monitors.GET("/:id", monitorsHandler.Get)
+				monitors.PUT("/:id", monitorsHandler.Update)
+				monitors.DELETE("/:id", monitorsHandler.Delete)
 			}
 
 			alerts := protected.Group("/alerts")
 			{
-				alerts.GET("", h.listAlerts)
-				alerts.POST("", h.createAlert)
-				alerts.GET("/:id", h.getAlert)
-				alerts.PUT("/:id", h.updateAlert)
-				alerts.DELETE("/:id", h.deleteAlert)
+				alerts.GET("", alertsHandler.List)
+				alerts.POST("", alertsHandler.Create)
+				alerts.GET("/:id", alertsHandler.Get)
+				alerts.PUT("/:id", alertsHandler.Update)
+				alerts.DELETE("/:id", alertsHandler.Delete)
 			}
 
 			settings := protected.Group("/settings")
 			{
-				settings.GET("", h.getSettings)
-				settings.PUT("", h.updateSettings)
+				settings.GET("", settingsHandler.Get)
+				settings.PUT("", settingsHandler.Update)
 			}
 		}
 	}
@@ -162,30 +158,3 @@ func main() {
 
 	logger.Info("server exited properly")
 }
-
-// Handler stubs
-func (h *handler) healthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-
-func (h *handler) listMonitors(c *gin.Context) {
-	h.logger.Info("handling request",
-		zap.String("handler", "listMonitors"),
-		zap.String("method", "GET"),
-		zap.String("path", "/monitors"))
-
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-}
-func (h *handler) createMonitor(c *gin.Context) { c.Status(http.StatusNotImplemented) }
-func (h *handler) getMonitor(c *gin.Context)    { c.Status(http.StatusNotImplemented) }
-func (h *handler) updateMonitor(c *gin.Context) { c.Status(http.StatusNotImplemented) }
-func (h *handler) deleteMonitor(c *gin.Context) { c.Status(http.StatusNotImplemented) }
-
-func (h *handler) listAlerts(c *gin.Context)  { c.Status(http.StatusNotImplemented) }
-func (h *handler) createAlert(c *gin.Context) { c.Status(http.StatusNotImplemented) }
-func (h *handler) getAlert(c *gin.Context)    { c.Status(http.StatusNotImplemented) }
-func (h *handler) updateAlert(c *gin.Context) { c.Status(http.StatusNotImplemented) }
-func (h *handler) deleteAlert(c *gin.Context) { c.Status(http.StatusNotImplemented) }
-
-func (h *handler) getSettings(c *gin.Context)    { c.Status(http.StatusNotImplemented) }
-func (h *handler) updateSettings(c *gin.Context) { c.Status(http.StatusNotImplemented) }
