@@ -19,7 +19,14 @@ func NewHandler(base *handlers.Handler) *Handler {
 	}
 }
 
-// Check handles the health check endpoint
+// Check godoc
+// @Summary      Health check endpoint
+// @Description  Returns OK if the service is healthy
+// @Tags         health
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /health [get]
 func (h *Handler) Check(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
-} 
+}

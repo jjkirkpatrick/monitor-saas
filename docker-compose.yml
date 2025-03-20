@@ -23,10 +23,10 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - POSTGRES_DSN=postgresql://monitoring:monitoring@postgres:5432/monitoring?sslmode=disable
       - NATS_URL=nats://nats:4222
-      - SUPABASE_PROJECT_REF=azvobquohejnqdvqtbnz
-      - SUPABASE_JWT_SECRET=wf6EXDROj8BX374nvekpNwhwyXmfNPgaEOQQNsfzmVK63ceaLuQdvBZWRKT3Pl+N/HBB+5QJfDT9EmUZ7yFFtg==
+      - SUPABASE_PROJECT_REF=mwcndphfrotlulcpjink
+      - SUPABASE_JWT_SECRET=oqn+2YQx6uWiS+AQ0ZNLxZr8A7Tsjipmzt4S6W96jFndHyRVamVz6sd708CR13JV3JHlSleDf7xjOPa/9G9i8A==
+      - DATABASE_URL=postgresql://postgres:Aeqpzmuc123!@db.mwcndphfrotlulcpjink.supabase.co:5432/postgres
     depends_on:
       - postgres
       - nats

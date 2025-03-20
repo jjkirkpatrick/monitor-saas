@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 )
 
 // UserClaims represents the expected JWT claims structure from Supabase
@@ -21,11 +22,12 @@ type UserClaims struct {
 }
 
 // JWTMiddleware verifies the JWT from the Authorization header.
-func JWTMiddleware() gin.HandlerFunc {
+func JWTMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the Authorization header value
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
+			logger.Warn("authorization header missing")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authorization header missing"})
 			return
 		}
@@ -33,6 +35,7 @@ func JWTMiddleware() gin.HandlerFunc {
 		// Expect header format to be "Bearer {token}"
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			logger.Warn("invalid authorization header format")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authorization header format must be Bearer {token}"})
 			return
 		}
@@ -43,12 +46,15 @@ func JWTMiddleware() gin.HandlerFunc {
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			// Ensure the token's signing method is HMAC (HS256)
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				logger.Error("unexpected JWT signing method",
+					zap.String("method", fmt.Sprintf("%v", token.Header["alg"])))
 				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 			}
 			// Replace with your actual Supabase JWT secret (consider using environment variables in production)
 			return []byte(os.Getenv("SUPABASE_JWT_SECRET")), nil
 		})
 		if err != nil {
+			logger.Error("failed to parse JWT token", zap.Error(err))
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
@@ -65,11 +71,16 @@ func JWTMiddleware() gin.HandlerFunc {
 				IsAnonymous:   claims["is_anonymous"].(bool),
 			}
 
+			logger.Debug("JWT token validated successfully",
+				zap.String("email", user.Email))
+
 			// Store both full claims and parsed user info in context
 			c.Set("JWT_CLAIMS", claims)
-			c.Set("USER", user)
+			c.Set("user_id", user.Sub)
+			c.Set("user_roles", user.Role)
 			c.Next()
 		} else {
+			logger.Warn("invalid JWT token")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			return
 		}

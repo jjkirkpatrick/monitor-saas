@@ -34,6 +34,7 @@ func LoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 			zap.Duration("latency", latency),
 			zap.String("client_ip", clientIP),
 			zap.String("user_agent", userAgent),
+			zap.String("Error", c.Errors.String()),
 		)
 	}
 }

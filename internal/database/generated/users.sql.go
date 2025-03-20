@@ -331,6 +331,54 @@ func (q *Queries) GetUsersNearingLimits(ctx context.Context) ([]GetUsersNearingL
 	return items, nil
 }
 
+const resetUserSettings = `-- name: ResetUserSettings :one
+UPDATE user_settings
+SET
+    theme = 'system',
+    timezone = 'UTC',
+    date_format = 'YYYY-MM-DD',
+    time_format = 'HH:mm:ss',
+    default_dashboard_view = 'overview',
+    dashboard_refresh_interval = 60,
+    email_digest_enabled = true,
+    email_digest_frequency = 'daily',
+    mobile_number = NULL,
+    telegram_username = NULL,
+    webhook_secret = NULL,
+    api_key_enabled = false,
+    api_key = NULL,
+    api_key_created_at = NULL,
+    api_key_last_used_at = NULL
+WHERE user_id = $1
+RETURNING user_id, theme, timezone, date_format, time_format, default_dashboard_view, dashboard_refresh_interval, email_digest_enabled, email_digest_frequency, mobile_number, telegram_username, webhook_secret, api_key_enabled, api_key, api_key_created_at, api_key_last_used_at, created_at, updated_at
+`
+
+func (q *Queries) ResetUserSettings(ctx context.Context, userID uuid.UUID) (UserSetting, error) {
+	row := q.db.QueryRow(ctx, resetUserSettings, userID)
+	var i UserSetting
+	err := row.Scan(
+		&i.UserID,
+		&i.Theme,
+		&i.Timezone,
+		&i.DateFormat,
+		&i.TimeFormat,
+		&i.DefaultDashboardView,
+		&i.DashboardRefreshInterval,
+		&i.EmailDigestEnabled,
+		&i.EmailDigestFrequency,
+		&i.MobileNumber,
+		&i.TelegramUsername,
+		&i.WebhookSecret,
+		&i.ApiKeyEnabled,
+		&i.ApiKey,
+		&i.ApiKeyCreatedAt,
+		&i.ApiKeyLastUsedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const revokeApiKey = `-- name: RevokeApiKey :exec
 UPDATE user_settings
 SET
@@ -344,6 +392,46 @@ WHERE user_id = $1
 func (q *Queries) RevokeApiKey(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, revokeApiKey, userID)
 	return err
+}
+
+const toggleSetting = `-- name: ToggleSetting :one
+UPDATE user_settings
+SET
+    email_digest_enabled = CASE WHEN $2 = 'email_digest_enabled' THEN NOT email_digest_enabled ELSE email_digest_enabled END,
+    api_key_enabled = CASE WHEN $2 = 'api_key_enabled' THEN NOT api_key_enabled ELSE api_key_enabled END
+WHERE user_id = $1
+RETURNING user_id, theme, timezone, date_format, time_format, default_dashboard_view, dashboard_refresh_interval, email_digest_enabled, email_digest_frequency, mobile_number, telegram_username, webhook_secret, api_key_enabled, api_key, api_key_created_at, api_key_last_used_at, created_at, updated_at
+`
+
+type ToggleSettingParams struct {
+	UserID  uuid.UUID
+	Column2 interface{}
+}
+
+func (q *Queries) ToggleSetting(ctx context.Context, arg ToggleSettingParams) (UserSetting, error) {
+	row := q.db.QueryRow(ctx, toggleSetting, arg.UserID, arg.Column2)
+	var i UserSetting
+	err := row.Scan(
+		&i.UserID,
+		&i.Theme,
+		&i.Timezone,
+		&i.DateFormat,
+		&i.TimeFormat,
+		&i.DefaultDashboardView,
+		&i.DashboardRefreshInterval,
+		&i.EmailDigestEnabled,
+		&i.EmailDigestFrequency,
+		&i.MobileNumber,
+		&i.TelegramUsername,
+		&i.WebhookSecret,
+		&i.ApiKeyEnabled,
+		&i.ApiKey,
+		&i.ApiKeyCreatedAt,
+		&i.ApiKeyLastUsedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateApiKeyLastUsed = `-- name: UpdateApiKeyLastUsed :exec
@@ -418,7 +506,10 @@ SET
     email_digest_frequency = COALESCE($9, email_digest_frequency),
     mobile_number = COALESCE($10, mobile_number),
     telegram_username = COALESCE($11, telegram_username),
-    webhook_secret = COALESCE($12, webhook_secret)
+    webhook_secret = COALESCE($12, webhook_secret),
+    api_key_enabled = COALESCE($13, api_key_enabled),
+    api_key = COALESCE($14, api_key),
+    api_key_created_at = COALESCE($15, api_key_created_at)
 WHERE user_id = $1
 RETURNING user_id, theme, timezone, date_format, time_format, default_dashboard_view, dashboard_refresh_interval, email_digest_enabled, email_digest_frequency, mobile_number, telegram_username, webhook_secret, api_key_enabled, api_key, api_key_created_at, api_key_last_used_at, created_at, updated_at
 `
@@ -436,6 +527,9 @@ type UpdateUserSettingsParams struct {
 	MobileNumber             pgtype.Text
 	TelegramUsername         pgtype.Text
 	WebhookSecret            pgtype.Text
+	ApiKeyEnabled            bool
+	ApiKey                   pgtype.Text
+	ApiKeyCreatedAt          pgtype.Timestamptz
 }
 
 func (q *Queries) UpdateUserSettings(ctx context.Context, arg UpdateUserSettingsParams) (UserSetting, error) {
@@ -452,6 +546,9 @@ func (q *Queries) UpdateUserSettings(ctx context.Context, arg UpdateUserSettings
 		arg.MobileNumber,
 		arg.TelegramUsername,
 		arg.WebhookSecret,
+		arg.ApiKeyEnabled,
+		arg.ApiKey,
+		arg.ApiKeyCreatedAt,
 	)
 	var i UserSetting
 	err := row.Scan(

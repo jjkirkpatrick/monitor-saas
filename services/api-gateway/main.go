@@ -13,6 +13,7 @@ import (
 	"github.com/jjkirkpatrick/monitoring/internal/database"
 	"github.com/jjkirkpatrick/monitoring/pkg/auth"
 	"github.com/jjkirkpatrick/monitoring/pkg/observability"
+	_ "github.com/jjkirkpatrick/monitoring/services/api-gateway/docs"
 	"github.com/jjkirkpatrick/monitoring/services/api-gateway/handlers"
 	"github.com/jjkirkpatrick/monitoring/services/api-gateway/handlers/alerts"
 	"github.com/jjkirkpatrick/monitoring/services/api-gateway/handlers/health"
@@ -21,12 +22,33 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.uber.org/zap"
 )
 
+// @title           Monitor SaaS API
+// @version         1.0
+// @description     API Gateway for the Monitor SaaS platform
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://monitor-saas.com/support
+// @contact.email  support@monitor-saas.com
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description JWT token for authentication
 func main() {
-	logger, _ := zap.NewProduction()
+	logger, _ := zap.NewDevelopment()
 	defer logger.Sync()
 
 	// Initialize OpenTelemetry
@@ -83,6 +105,9 @@ func main() {
 	// Metrics endpoint for Prometheus
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
+	// Swagger documentation endpoint
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// Initialize base handler
 	baseHandler := handlers.NewHandler(logger, db)
 
@@ -103,7 +128,7 @@ func main() {
 
 		// Protected routes
 		protected := v1.Group("/")
-		protected.Use(auth.JWTMiddleware())
+		protected.Use(auth.JWTMiddleware(logger))
 		{
 			monitors := protected.Group("/monitors")
 			{
@@ -127,6 +152,11 @@ func main() {
 			{
 				settings.GET("", settingsHandler.Get)
 				settings.PUT("", settingsHandler.Update)
+				settings.PATCH("", settingsHandler.UpdateSingle)
+				settings.POST("/toggle/:setting", settingsHandler.ToggleSetting)
+				settings.POST("/api-key", settingsHandler.GenerateAPIKey)
+				settings.POST("/test-webhook", settingsHandler.TestWebhook)
+				settings.POST("/reset", settingsHandler.ResetSettings)
 			}
 		}
 	}

@@ -1,0 +1,1138 @@
+basePath: /api/v1
+definitions:
+  types.AlertCondition:
+    enum:
+    - status_code
+    - latency
+    - availability
+    - ssl_expiry
+    - keyword
+    - pattern
+    type: string
+    x-enum-varnames:
+    - AlertConditionStatusCode
+    - AlertConditionLatency
+    - AlertConditionAvailability
+    - AlertConditionSSLExpiry
+    - AlertConditionKeyword
+    - AlertConditionPattern
+  types.AlertConfig:
+    properties:
+      condition:
+        $ref: '#/definitions/types.AlertCondition'
+      consecutive_count:
+        type: integer
+      cooldown_minutes:
+        type: integer
+      created_at:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      monitor_id:
+        type: string
+      name:
+        type: string
+      severity:
+        $ref: '#/definitions/types.AlertSeverity'
+      threshold:
+        $ref: '#/definitions/types.AlertThreshold'
+      updated_at:
+        type: string
+    type: object
+  types.AlertSeverity:
+    enum:
+    - info
+    - warning
+    - critical
+    type: string
+    x-enum-varnames:
+    - AlertSeverityInfo
+    - AlertSeverityWarning
+    - AlertSeverityCritical
+  types.AlertThreshold:
+    properties:
+      days_in_advance:
+        description: For SSL expiry alerts
+        type: integer
+      exact_match:
+        type: string
+      max:
+        type: number
+      min:
+        type: number
+      pattern:
+        type: string
+    type: object
+  types.CreateAlertConfigRequest:
+    properties:
+      condition:
+        $ref: '#/definitions/types.AlertCondition'
+      consecutive_count:
+        minimum: 1
+        type: integer
+      cooldown_minutes:
+        minimum: 1
+        type: integer
+      monitor_id:
+        type: string
+      name:
+        type: string
+      severity:
+        $ref: '#/definitions/types.AlertSeverity'
+      threshold:
+        $ref: '#/definitions/types.AlertThreshold'
+    required:
+    - condition
+    - consecutive_count
+    - cooldown_minutes
+    - monitor_id
+    - name
+    - severity
+    - threshold
+    type: object
+  types.CreateMonitorRequest:
+    properties:
+      dns_record_type:
+        type: string
+      expected_response:
+        type: string
+      expected_status_codes:
+        items:
+          type: integer
+        type: array
+      follow_redirects:
+        type: boolean
+      interval:
+        minimum: 30
+        type: integer
+      locations:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      name:
+        type: string
+      port:
+        type: integer
+      status:
+        $ref: '#/definitions/types.MonitorStatus'
+      target:
+        type: string
+      timeout:
+        minimum: 5
+        type: integer
+      type:
+        $ref: '#/definitions/types.MonitorType'
+      verify_ssl:
+        type: boolean
+    required:
+    - interval
+    - locations
+    - name
+    - target
+    - timeout
+    - type
+    type: object
+  types.GenerateAPIKeyResponse:
+    properties:
+      api_key:
+        type: string
+      created_at:
+        type: string
+      expires_at:
+        type: string
+    type: object
+  types.GetAlertConfigResponse:
+    properties:
+      alert_config:
+        $ref: '#/definitions/types.AlertConfig'
+    type: object
+  types.GetMonitorResponse:
+    properties:
+      monitor:
+        $ref: '#/definitions/types.Monitor'
+    type: object
+  types.GetSettingsResponse:
+    properties:
+      limits:
+        $ref: '#/definitions/types.UserLimits'
+      settings:
+        $ref: '#/definitions/types.UserSettings'
+      usage:
+        $ref: '#/definitions/types.UserUsageStats'
+    type: object
+  types.ListAlertConfigsResponse:
+    properties:
+      alert_configs:
+        items:
+          $ref: '#/definitions/types.AlertConfig'
+        type: array
+      total:
+        type: integer
+    type: object
+  types.ListMonitorsResponse:
+    properties:
+      monitors:
+        items:
+          $ref: '#/definitions/types.Monitor'
+        type: array
+      total:
+        type: integer
+    type: object
+  types.Monitor:
+    properties:
+      created_at:
+        type: string
+      dns_record_type:
+        type: string
+      expected_response:
+        type: string
+      expected_status_codes:
+        items:
+          type: integer
+        type: array
+      follow_redirects:
+        type: boolean
+      id:
+        type: string
+      interval:
+        type: integer
+      locations:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      port:
+        type: integer
+      status:
+        $ref: '#/definitions/types.MonitorStatus'
+      target:
+        type: string
+      timeout:
+        type: integer
+      type:
+        $ref: '#/definitions/types.MonitorType'
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      verify_ssl:
+        type: boolean
+    type: object
+  types.MonitorStatus:
+    enum:
+    - active
+    - paused
+    - error
+    type: string
+    x-enum-varnames:
+    - MonitorStatusActive
+    - MonitorStatusPaused
+    - MonitorStatusError
+  types.MonitorType:
+    enum:
+    - http
+    - tcp
+    - ping
+    - dns
+    type: string
+    x-enum-varnames:
+    - MonitorTypeHTTP
+    - MonitorTypeTCP
+    - MonitorTypePing
+    - MonitorTypeDNS
+  types.TestWebhookRequest:
+    properties:
+      url:
+        type: string
+    required:
+    - url
+    type: object
+  types.TestWebhookResponse:
+    properties:
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  types.ThemePreference:
+    enum:
+    - light
+    - dark
+    - system
+    type: string
+    x-enum-varnames:
+    - ThemeLight
+    - ThemeDark
+    - ThemeSystem
+  types.TimezonePreference:
+    enum:
+    - UTC
+    - America/New_York
+    - America/Los_Angeles
+    - Europe/London
+    - Europe/Paris
+    - Asia/Tokyo
+    - Asia/Singapore
+    - Australia/Sydney
+    type: string
+    x-enum-varnames:
+    - TimezoneUTC
+    - TimezoneNewYork
+    - TimezoneLosAngeles
+    - TimezoneLondon
+    - TimezoneParis
+    - TimezoneTokyo
+    - TimezoneSingapore
+    - TimezoneSydney
+  types.ToggleSettingResponse:
+    properties:
+      setting:
+        type: string
+      updated_at:
+        type: string
+      value:
+        type: boolean
+    type: object
+  types.UpdateAlertConfigRequest:
+    properties:
+      condition:
+        $ref: '#/definitions/types.AlertCondition'
+      consecutive_count:
+        minimum: 1
+        type: integer
+      cooldown_minutes:
+        minimum: 1
+        type: integer
+      enabled:
+        type: boolean
+      name:
+        type: string
+      severity:
+        $ref: '#/definitions/types.AlertSeverity'
+      threshold:
+        $ref: '#/definitions/types.AlertThreshold'
+    type: object
+  types.UpdateMonitorRequest:
+    properties:
+      dns_record_type:
+        type: string
+      expected_response:
+        type: string
+      expected_status_codes:
+        items:
+          type: integer
+        type: array
+      follow_redirects:
+        type: boolean
+      interval:
+        minimum: 30
+        type: integer
+      locations:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      name:
+        type: string
+      port:
+        type: integer
+      status:
+        $ref: '#/definitions/types.MonitorStatus'
+      target:
+        type: string
+      timeout:
+        minimum: 5
+        type: integer
+      type:
+        $ref: '#/definitions/types.MonitorType'
+      verify_ssl:
+        type: boolean
+    type: object
+  types.UpdateSettingsRequest:
+    properties:
+      api_key_enabled:
+        type: boolean
+      dashboard_refresh_interval:
+        type: integer
+      date_format:
+        type: string
+      default_dashboard_view:
+        type: string
+      email_digest_enabled:
+        type: boolean
+      email_digest_frequency:
+        type: string
+      mobile_number:
+        type: string
+      telegram_username:
+        type: string
+      theme:
+        $ref: '#/definitions/types.ThemePreference'
+      time_format:
+        type: string
+      timezone:
+        $ref: '#/definitions/types.TimezonePreference'
+      webhook_secret:
+        type: string
+    type: object
+  types.UserLimits:
+    properties:
+      api_rate_limit_per_minute:
+        type: integer
+      created_at:
+        type: string
+      max_alert_configs_per_monitor:
+        type: integer
+      max_checks_per_day:
+        type: integer
+      max_monitors:
+        type: integer
+      max_notification_channels:
+        type: integer
+      retention_days:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  types.UserSettings:
+    properties:
+      api_key:
+        type: string
+      api_key_created_at:
+        type: string
+      api_key_enabled:
+        type: boolean
+      api_key_last_used_at:
+        type: string
+      created_at:
+        type: string
+      dashboard_refresh_interval:
+        type: integer
+      date_format:
+        type: string
+      default_dashboard_view:
+        type: string
+      email_digest_enabled:
+        type: boolean
+      email_digest_frequency:
+        type: string
+      mobile_number:
+        type: string
+      telegram_username:
+        type: string
+      theme:
+        $ref: '#/definitions/types.ThemePreference'
+      time_format:
+        type: string
+      timezone:
+        $ref: '#/definitions/types.TimezonePreference'
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      webhook_secret:
+        type: string
+    type: object
+  types.UserUsageStats:
+    properties:
+      api_calls:
+        type: integer
+      data_transfer_bytes:
+        type: integer
+      date:
+        type: string
+      total_alerts_triggered:
+        type: integer
+      total_checks:
+        type: integer
+      total_notifications_sent:
+        type: integer
+      user_id:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@monitor-saas.com
+    name: API Support
+    url: http://monitor-saas.com/support
+  description: API Gateway for the Monitor SaaS platform
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Monitor SaaS API
+  version: "1.0"
+paths:
+  /alerts:
+    get:
+      consumes:
+      - application/json
+      description: Get all alert configurations for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ListAlertConfigsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: List alert configurations
+      tags:
+      - alerts
+    post:
+      consumes:
+      - application/json
+      description: Create a new alert configuration for a monitor
+      parameters:
+      - description: Alert config details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateAlertConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetAlertConfigResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Create alert config
+      tags:
+      - alerts
+  /alerts/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an alert configuration by ID
+      parameters:
+      - description: Alert Config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete alert config
+      tags:
+      - alerts
+    get:
+      consumes:
+      - application/json
+      description: Get details for a specific alert config by ID
+      parameters:
+      - description: Alert Config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetAlertConfigResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get alert config details
+      tags:
+      - alerts
+    put:
+      consumes:
+      - application/json
+      description: Update an existing alert configuration by ID
+      parameters:
+      - description: Alert Config ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Alert config update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.UpdateAlertConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetAlertConfigResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update alert config
+      tags:
+      - alerts
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Returns OK if the service is healthy
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check endpoint
+      tags:
+      - health
+  /monitors:
+    get:
+      consumes:
+      - application/json
+      description: Get all monitors for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ListMonitorsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: List monitors
+      tags:
+      - monitors
+    post:
+      consumes:
+      - application/json
+      description: Creates a new monitor for the authenticated user
+      parameters:
+      - description: Monitor to create
+        in: body
+        name: monitor
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateMonitorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetMonitorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Create a new monitor
+      tags:
+      - monitors
+  /monitors/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a monitor for the authenticated user
+      parameters:
+      - description: Monitor ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete a monitor
+      tags:
+      - monitors
+    get:
+      consumes:
+      - application/json
+      description: Get details for a specific monitor by ID
+      parameters:
+      - description: Monitor ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetMonitorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get monitor details
+      tags:
+      - monitors
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing monitor for the authenticated user
+      parameters:
+      - description: Monitor ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Monitor to update
+        in: body
+        name: monitor
+        required: true
+        schema:
+          $ref: '#/definitions/types.UpdateMonitorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetMonitorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update a monitor
+      tags:
+      - monitors
+  /settings:
+    get:
+      consumes:
+      - application/json
+      description: Get settings for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GetSettingsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Get user settings
+      tags:
+      - settings
+    patch:
+      consumes:
+      - application/json
+      description: Updates a single setting for the authenticated user
+      parameters:
+      - description: Setting to update
+        in: body
+        name: setting
+        required: true
+        schema:
+          $ref: '#/definitions/types.UpdateSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.UserSettings'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update a single setting
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      description: Updates all settings for the authenticated user
+      parameters:
+      - description: Settings to update
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/types.UpdateSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.UserSettings'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Update all user settings
+      tags:
+      - settings
+  /settings/api-key:
+    post:
+      consumes:
+      - application/json
+      description: Generates a new API key for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.GenerateAPIKeyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Generate a new API key
+      tags:
+      - settings
+  /settings/reset:
+    post:
+      consumes:
+      - application/json
+      description: Resets all user settings to their default values
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.UserSettings'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Reset user settings to defaults
+      tags:
+      - settings
+  /settings/test-webhook:
+    post:
+      consumes:
+      - application/json
+      description: Tests the webhook configuration by sending a test payload
+      parameters:
+      - description: Webhook configuration to test
+        in: body
+        name: webhook
+        required: true
+        schema:
+          $ref: '#/definitions/types.TestWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.TestWebhookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Test webhook configuration
+      tags:
+      - settings
+  /settings/toggle/{setting}:
+    post:
+      consumes:
+      - application/json
+      description: Toggles a boolean setting for the authenticated user
+      parameters:
+      - description: Setting name to toggle
+        in: path
+        name: setting
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.ToggleSettingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Toggle a boolean setting
+      tags:
+      - settings
+securityDefinitions:
+  Bearer:
+    description: JWT token for authentication
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

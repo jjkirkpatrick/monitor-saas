@@ -15,7 +15,10 @@ SET
     email_digest_frequency = COALESCE($9, email_digest_frequency),
     mobile_number = COALESCE($10, mobile_number),
     telegram_username = COALESCE($11, telegram_username),
-    webhook_secret = COALESCE($12, webhook_secret)
+    webhook_secret = COALESCE($12, webhook_secret),
+    api_key_enabled = COALESCE($13, api_key_enabled),
+    api_key = COALESCE($14, api_key),
+    api_key_created_at = COALESCE($15, api_key_created_at)
 WHERE user_id = $1
 RETURNING *;
 
@@ -100,6 +103,35 @@ WHERE user_id = $1;
 UPDATE user_settings
 SET api_key_last_used_at = NOW()
 WHERE user_id = $1;
+
+-- name: ToggleSetting :one
+UPDATE user_settings
+SET
+    email_digest_enabled = CASE WHEN $2 = 'email_digest_enabled' THEN NOT email_digest_enabled ELSE email_digest_enabled END,
+    api_key_enabled = CASE WHEN $2 = 'api_key_enabled' THEN NOT api_key_enabled ELSE api_key_enabled END
+WHERE user_id = $1
+RETURNING *;
+
+-- name: ResetUserSettings :one
+UPDATE user_settings
+SET
+    theme = 'system',
+    timezone = 'UTC',
+    date_format = 'YYYY-MM-DD',
+    time_format = 'HH:mm:ss',
+    default_dashboard_view = 'overview',
+    dashboard_refresh_interval = 60,
+    email_digest_enabled = true,
+    email_digest_frequency = 'daily',
+    mobile_number = NULL,
+    telegram_username = NULL,
+    webhook_secret = NULL,
+    api_key_enabled = false,
+    api_key = NULL,
+    api_key_created_at = NULL,
+    api_key_last_used_at = NULL
+WHERE user_id = $1
+RETURNING *;
 
 -- name: GetUserMonitoringStats :one
 SELECT
